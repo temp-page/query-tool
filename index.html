@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>查询Margin</title>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1'>
+</head>
+
+</html>
+
+<body style="padding: 10px;">
+    <h1>查询Margin</h1>
+    <span style="margin-right: 10px;">请输入地址</span><input value="" id="address" style="width:400px;" />
+    <button id="query">查询</button>
+    <h5>查询结果</h5>
+    <p style="margin-top: 10px;font-size: 20px;" id="result"></p>
+</body>
+<style>
+
+</style>
+
+<script src="./jquery.min.js"></script>
+<script src='./bignumber.js'></script>
+<script src='./index.min.js'></script>
+<script type='text/javascript'>
+    console.log(jssdk)
+
+
+    $(function () {
+
+        $('#query').unbind('click').click(async () => {
+            $("#result").html("")
+            try {
+                jssdk.initAddressInfo("dev_prod");
+                const connectInfo = jssdk.getCurrentAddressInfo().readonlyConnectInfo();
+                const account = $("#address").val().replace(/(^\s*)|(\s*$)/g, "");
+
+                const router = connectInfo.create(jssdk.Router);
+
+                const [routerResult] = await connectInfo.multiCall().call(
+                    {
+                        position: router.routerInstance.getPosition(connectInfo.addressInfo.WETH, connectInfo.addressInfo.USDC, account),
+                    }
+                );
+                const position = routerResult.position;
+                const side = jssdk.TradeMath.side(position.quoteSize);
+                let margin;
+                if (side === jssdk.SideType.LONG) {
+                    margin = new BigNumber(position.baseSize)
+                        .minus(position.tradeSize)
+                        .div(10 ** 18)
+                        .toFixed();
+                } else {
+                    margin = new BigNumber(position.baseSize)
+                        .plus(position.tradeSize)
+                        .div(10 ** 18)
+                        .toFixed();
+                }
+
+                $("#result").html(`${account} <br/>Margin: <span style="color: red;">${margin}</span> ETH <br/>
+                
+                <br/>
+                <br/>
+                tradeSize:${position.tradeSize}   <br/>
+                baseSize:${position.baseSize}   <br/>
+                quoteSize:${position.quoteSize}   <br/>
+                `)
+                console.log(account, "\nMargin:", margin + " ETH");
+            } catch (e) {
+                $("#result").html("查询出现异常，请检查网络和输入情况")
+            }
+        })
+
+    });
+</script>
